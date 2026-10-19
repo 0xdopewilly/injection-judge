@@ -72,7 +72,10 @@ def test_parse_reading():
     spaced = parse({"verdict": "POISONED", "quote": "READ   ~/.cursor/mcp.json and\npass", "reason": "r"}, TEXT)
     assert spaced["verdict"] == "POISONED"  # whitespace and case do not matter
     long = parse({"verdict": "SAFE", "quote": "x" * 999, "reason": "y" * 999}, TEXT)
-    assert len(long["quote"]) == verdict.MAX_QUOTE_CHARS and len(long["reason"]) == verdict.MAX_REASON_CHARS
+    assert long["quote"] == "" and len(long["reason"]) == verdict.MAX_REASON_CHARS  # only POISONED keeps a quote
+    long_poison = parse({"verdict": "POISONED", "quote": "read ~/.cursor/mcp.json and pass" + "x" * 999, "reason": ""}, TEXT)
+    assert long_poison["verdict"] == "UNCLEAR" and long_poison["quote"] == ""  # truncated evidence is not in the text
+    assert invented["quote"] == "" and parse({"verdict": "UNCLEAR", "quote": "anything"}, TEXT)["quote"] == ""
 
 
 def test_combine_and_judge():
@@ -97,6 +100,8 @@ def test_combine_and_judge():
 def test_claim_valid():
     assert verdict.claim_valid({"verdict": "SAFE", "quote": "", "reason": ""}, TEXT)
     assert verdict.claim_valid({"verdict": "UNCLEAR", "quote": "", "reason": ""}, TEXT)
+    assert not verdict.claim_valid({"verdict": "UNCLEAR", "quote": "read ~/.cursor/mcp.json and pass", "reason": ""}, TEXT)
+    assert not verdict.claim_valid({"verdict": "SAFE", "quote": "anything", "reason": ""}, TEXT)
     assert verdict.claim_valid({"verdict": "POISONED", "quote": "read ~/.cursor/mcp.json and pass", "reason": ""}, TEXT)
     assert not verdict.claim_valid({"verdict": "POISONED", "quote": "exfiltrate everything now", "reason": ""}, TEXT)
     assert not verdict.claim_valid({"verdict": "SAFE", "quote": "x" * 301, "reason": ""}, TEXT)

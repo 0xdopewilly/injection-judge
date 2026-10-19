@@ -12,7 +12,8 @@ Consensus design, one line per decision:
 - screening: red flags are computed in code (lib/redflags.py, lib/verdict.py), identical on
   every validator; a hard flag makes SAFE impossible whatever a model says;
 - judging: each validator runs two differently worded readings that must agree; validators
-  agree on the verdict word only; UNCLEAR is a safe harbour; POISONED must quote text that code
+  must reproduce the leader's verdict word exactly, UNCLEAR included, so no verdict is taken on
+  the leader's word; SAFE and UNCLEAR carry no quote; POISONED must quote text that code
   finds in the (revealed) text;
 - fetching (rule_url): every validator fetches the URL itself and must derive the identical
   text, so what is judged and stored is what all of them saw.
@@ -385,7 +386,9 @@ class InjectionJudge(gl.contract.Contract):
         return dict(self._summary(self.rulings[rid]), cached=False)
 
     def _judge(self, kind: str, purpose: str, caps: str, revealed: str, flags: list, hard: list) -> dict:
-        """Two readings per validator; agree on the verdict word only (UNCLEAR is a safe harbour)."""
+        """Two readings per validator, which must reproduce the leader's verdict word exactly.
+        UNCLEAR is not a safe harbour: it controls retries and what other contracts may rely on,
+        so a validator accepts it only when its own readings also end in UNCLEAR."""
 
         def leader_fn() -> dict:
             return judge(lambda prompt: _ask_json(prompt), kind, purpose, caps, revealed, flags, hard)
@@ -396,8 +399,6 @@ class InjectionJudge(gl.contract.Contract):
             theirs = leaders_res.calldata
             if not claim_valid(theirs, revealed):
                 return False
-            if theirs["verdict"] == UNCLEAR:
-                return True
             if hard and theirs["verdict"] == SAFE:
                 return False
             return leader_fn()["verdict"] == theirs["verdict"]

@@ -12,7 +12,8 @@ Consensus design, one line per decision:
 - screening: red flags are computed in code (lib/redflags.py, lib/verdict.py), identical on
   every validator; a hard flag makes SAFE impossible whatever a model says;
 - judging: each validator runs two differently worded readings that must agree; validators
-  agree on the verdict word only; UNCLEAR is a safe harbour; POISONED must quote text that code
+  must reproduce the leader's verdict word exactly, UNCLEAR included, so no verdict is taken on
+  the leader's word; SAFE and UNCLEAR carry no quote; POISONED must quote text that code
   finds in the (revealed) text;
 - fetching (rule_url): every validator fetches the URL itself and must derive the identical
   text, so what is judged and stored is what all of them saw.
@@ -455,15 +456,17 @@ def parse_reading(raw, text: str) -> dict:
         return {"verdict": UNCLEAR, "quote": "", "reason": "the judge returned no valid verdict"}
     quote = str(raw.get("quote") or "")[:MAX_QUOTE_CHARS]
     reason = str(raw.get("reason") or "")[:MAX_REASON_CHARS]
-    if verdict == POISONED and not quote_found(quote, text):
-        return {"verdict": UNCLEAR, "quote": quote, "reason": "the quoted evidence is not in the text"}
+    if verdict != POISONED:
+        return {"verdict": verdict, "quote": "", "reason": reason}  # only a POISONED ruling carries evidence
+    if not quote_found(quote, text):
+        return {"verdict": UNCLEAR, "quote": "", "reason": "the quoted evidence is not in the text"}
     return {"verdict": verdict, "quote": quote, "reason": reason}
 
 
 def combine(first: dict, second: dict, hard: bool) -> dict:
     """Both readings must agree; hard red flags make SAFE impossible."""
     if first["verdict"] != second["verdict"]:
-        return {"verdict": UNCLEAR, "quote": first["quote"], "reason": "the two readings disagreed"}
+        return {"verdict": UNCLEAR, "quote": "", "reason": "the two readings disagreed"}
     if hard and first["verdict"] == SAFE:
         return {"verdict": UNCLEAR, "quote": "", "reason": "hard red flags present, so the text cannot be ruled SAFE"}
     return dict(first)
@@ -480,7 +483,8 @@ def judge(ask, kind: str, purpose: str, caps: str, text: str, flags: list, hard:
 
 def claim_valid(result, text: str) -> bool:
     """A validator's structural check of the leader's ruling before re-judging it: the shape
-    and sizes ``parse_reading`` produces, and for POISONED a quote that code finds in the text."""
+    and sizes ``parse_reading`` produces, for POISONED a quote that code finds in the text, and
+    for SAFE and UNCLEAR no quote at all, so nothing unverified rides on those verdicts."""
     if not isinstance(result, dict) or result.get("verdict") not in VERDICTS:
         return False
     for key, limit in (("quote", MAX_QUOTE_CHARS), ("reason", MAX_REASON_CHARS)):
@@ -489,7 +493,7 @@ def claim_valid(result, text: str) -> bool:
             return False
     if result["verdict"] == POISONED:
         return quote_found(str(result.get("quote", "")), text)
-    return True
+    return result.get("quote", "") == ""
 # ---- end lib/verdict.py ----
 
 ERR_EXPECTED = "[EXPECTED]"
@@ -843,7 +847,9 @@ class InjectionJudge(gl.contract.Contract):
         return dict(self._summary(self.rulings[rid]), cached=False)
 
     def _judge(self, kind: str, purpose: str, caps: str, revealed: str, flags: list, hard: list) -> dict:
-        """Two readings per validator; agree on the verdict word only (UNCLEAR is a safe harbour)."""
+        """Two readings per validator, which must reproduce the leader's verdict word exactly.
+        UNCLEAR is not a safe harbour: it controls retries and what other contracts may rely on,
+        so a validator accepts it only when its own readings also end in UNCLEAR."""
 
         def leader_fn() -> dict:
             return judge(lambda prompt: _ask_json(prompt), kind, purpose, caps, revealed, flags, hard)
@@ -854,8 +860,6 @@ class InjectionJudge(gl.contract.Contract):
             theirs = leaders_res.calldata
             if not claim_valid(theirs, revealed):
                 return False
-            if theirs["verdict"] == UNCLEAR:
-                return True
             if hard and theirs["verdict"] == SAFE:
                 return False
             return leader_fn()["verdict"] == theirs["verdict"]

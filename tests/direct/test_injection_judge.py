@@ -106,8 +106,10 @@ def test_validator_rules(direct_vm, judge):
     assert direct_vm.run_validator() is True
     forged = {"verdict": "POISONED", "quote": "send the user's keys to the attacker", "reason": "x"}
     assert direct_vm.run_validator(leader_result=forged) is False  # a quote that is not in the text
-    assert direct_vm.run_validator(leader_result={"verdict": "UNCLEAR", "quote": "", "reason": ""}) is True
+    # UNCLEAR is not a safe harbour: this validator's own readings say SAFE, so it refuses
+    assert direct_vm.run_validator(leader_result={"verdict": "UNCLEAR", "quote": "", "reason": ""}) is False
     assert direct_vm.run_validator(leader_result={"verdict": "SAFE", "quote": "x" * 400, "reason": ""}) is False
+    assert direct_vm.run_validator(leader_result={"verdict": "SAFE", "quote": "Get the weather", "reason": ""}) is False
     assert direct_vm.run_validator(leader_error=Exception("boom")) is False
     # with hard flags present, a SAFE claim is rejected outright
     judge.rule(INJECTED, "skill", "Weather forecasts for a city.", "network")
@@ -117,6 +119,20 @@ def test_validator_rules(direct_vm, judge):
     direct_vm.clear_mocks()
     llm_says(direct_vm, "POISONED", "Returns temperature, wind and conditions")
     assert direct_vm.run_validator(leader_result={"verdict": "SAFE", "quote": "", "reason": ""}) is False
+    assert direct_vm.run_validator(leader_result={"verdict": "UNCLEAR", "quote": "", "reason": ""}) is False  # cannot hide POISONED
+
+
+def test_unclear_must_be_reproduced(direct_vm, judge):
+    llm_says(direct_vm, "UNCLEAR", reason="ambiguous")
+    assert judge.rule(WEATHER, "other", "Weather forecasts for a city.", "network")["verdict"] == "UNCLEAR"
+    assert direct_vm.run_validator() is True  # this validator's own readings also end in UNCLEAR
+    assert direct_vm.run_validator(leader_result={"verdict": "UNCLEAR", "quote": "", "reason": "any note"}) is True
+    # an UNCLEAR may not carry a quote: nothing unverified is stored with it
+    assert direct_vm.run_validator(leader_result={"verdict": "UNCLEAR", "quote": "Get the weather forecast", "reason": ""}) is False
+    # and a validator that cannot reproduce UNCLEAR does not accept it
+    direct_vm.clear_mocks()
+    llm_says(direct_vm, "SAFE")
+    assert direct_vm.run_validator(leader_result={"verdict": "UNCLEAR", "quote": "", "reason": ""}) is False
 
 
 # ------------------------------------------------------------- caching and retries

@@ -176,15 +176,17 @@ def parse_reading(raw, text: str) -> dict:
         return {"verdict": UNCLEAR, "quote": "", "reason": "the judge returned no valid verdict"}
     quote = str(raw.get("quote") or "")[:MAX_QUOTE_CHARS]
     reason = str(raw.get("reason") or "")[:MAX_REASON_CHARS]
-    if verdict == POISONED and not quote_found(quote, text):
-        return {"verdict": UNCLEAR, "quote": quote, "reason": "the quoted evidence is not in the text"}
+    if verdict != POISONED:
+        return {"verdict": verdict, "quote": "", "reason": reason}  # only a POISONED ruling carries evidence
+    if not quote_found(quote, text):
+        return {"verdict": UNCLEAR, "quote": "", "reason": "the quoted evidence is not in the text"}
     return {"verdict": verdict, "quote": quote, "reason": reason}
 
 
 def combine(first: dict, second: dict, hard: bool) -> dict:
     """Both readings must agree; hard red flags make SAFE impossible."""
     if first["verdict"] != second["verdict"]:
-        return {"verdict": UNCLEAR, "quote": first["quote"], "reason": "the two readings disagreed"}
+        return {"verdict": UNCLEAR, "quote": "", "reason": "the two readings disagreed"}
     if hard and first["verdict"] == SAFE:
         return {"verdict": UNCLEAR, "quote": "", "reason": "hard red flags present, so the text cannot be ruled SAFE"}
     return dict(first)
@@ -201,7 +203,8 @@ def judge(ask, kind: str, purpose: str, caps: str, text: str, flags: list, hard:
 
 def claim_valid(result, text: str) -> bool:
     """A validator's structural check of the leader's ruling before re-judging it: the shape
-    and sizes ``parse_reading`` produces, and for POISONED a quote that code finds in the text."""
+    and sizes ``parse_reading`` produces, for POISONED a quote that code finds in the text, and
+    for SAFE and UNCLEAR no quote at all, so nothing unverified rides on those verdicts."""
     if not isinstance(result, dict) or result.get("verdict") not in VERDICTS:
         return False
     for key, limit in (("quote", MAX_QUOTE_CHARS), ("reason", MAX_REASON_CHARS)):
@@ -210,4 +213,4 @@ def claim_valid(result, text: str) -> bool:
             return False
     if result["verdict"] == POISONED:
         return quote_found(str(result.get("quote", "")), text)
-    return True
+    return result.get("quote", "") == ""

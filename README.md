@@ -53,7 +53,7 @@ if ruling.get("verdict") != "SAFE":
 | Step | What validators agree on |
 |---|---|
 | Screening | Nothing to agree on: red flags are computed in code ([`lib/redflags.py`](lib/redflags.py), [`lib/verdict.py`](lib/verdict.py)) and are identical everywhere. A hard flag makes SAFE impossible whatever any model says, so injected text can push a ruling toward UNCLEAR, never toward SAFE. |
-| Judging | Each validator runs two differently worded readings (classify; enumerate every instruction first) that must agree. Validators agree on the verdict word only. POISONED must quote a span that code finds in the text, with hidden characters revealed; a leader that invents evidence is rejected. UNCLEAR is a safe harbour. |
+| Judging | Each validator runs two differently worded readings (classify; enumerate every instruction first) that must agree. Every validator must reproduce the leader's verdict word exactly, UNCLEAR included: no verdict is taken on the leader's word. POISONED must quote a span that code finds in the text, with hidden characters revealed; SAFE and UNCLEAR carry no quote. |
 | Fetching (`rule_url`) | Every validator fetches the URL itself and must derive the identical text and hash, so what is judged and stored is what all of them saw. Classified failures (HTTP status, size, not UTF-8) are agreed on too. |
 
 Hard flags depend on the kind of text:
