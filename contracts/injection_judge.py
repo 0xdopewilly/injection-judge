@@ -14,7 +14,8 @@ Consensus design, one line per decision:
 - judging: each validator runs two differently worded readings that must agree; validators
   must reproduce the leader's verdict word exactly, UNCLEAR included, so no verdict is taken on
   the leader's word; SAFE and UNCLEAR carry no quote; POISONED must quote text that code
-  finds in the (revealed) text;
+  finds in the (revealed) text; the model's free-text reason is never compared, so it is never
+  stored: a ruling keeps a fixed sentence derived from the verified verdict;
 - fetching (rule_url): every validator fetches the URL itself and must derive the identical
   text, so what is judged and stored is what all of them saw.
 
@@ -292,7 +293,9 @@ Two layers, both run identically by every validator:
 2. Judging, by model. Two independent readings, worded differently: one classifies, one first
    enumerates every instruction the text gives a model. The verdict stands only if both agree,
    and POISONED must quote a span that code finds in the text (hidden characters revealed).
-   Validators compare the verdict word alone; quotes and reasons are stored, never compared.
+   Validators must reproduce the leader's verdict word exactly. Only POISONED carries a quote,
+   and code must find it in the text; the model's free-text reason is never compared, so it
+   is never stored: a ruling keeps a fixed sentence derived from verified facts (verified_ruling).
 """
 
 import json
@@ -494,13 +497,31 @@ def claim_valid(result, text: str) -> bool:
     if result["verdict"] == POISONED:
         return quote_found(str(result.get("quote", "")), text)
     return result.get("quote", "") == ""
+
+
+VERIFIED_REASONS = {
+    SAFE: "both readings found no instruction aimed at the model",
+    POISONED: "both readings found an instruction aimed at the model; the quote is verbatim from the text",
+    UNCLEAR: "the readings did not settle the verdict",
+}
+HARD_FLAG_REASON = "hard red flags present, so the text cannot be ruled SAFE"
+
+
+def verified_ruling(result: dict, hard: bool) -> dict:
+    """What a ruling stores once consensus accepted it: the verdict word every validator
+    reproduced, a POISONED quote that code found in the text, and a fixed reason derived from
+    those facts. The leader's own reason was never compared, so it is dropped."""
+    verdict = result["verdict"]
+    reason = HARD_FLAG_REASON if verdict == UNCLEAR and hard else VERIFIED_REASONS[verdict]
+    quote = str(result["quote"]) if verdict == POISONED else ""
+    return {"verdict": verdict, "quote": quote, "reason": reason}
 # ---- end lib/verdict.py ----
 
 ERR_EXPECTED = "[EXPECTED]"
 ERR_EXTERNAL = "[EXTERNAL]"
 ERR_TRANSIENT = "[TRANSIENT]"
 
-CONTRACT_VERSION = "1"
+CONTRACT_VERSION = "3"
 MAX_TEXT_BYTES = 12000
 MAX_PURPOSE_CHARS = 280
 MAX_URL_CHARS = 300
@@ -864,7 +885,8 @@ class InjectionJudge(gl.contract.Contract):
                 return False
             return leader_fn()["verdict"] == theirs["verdict"]
 
-        return gl.vm.run_nondet(leader_fn, validator_fn)
+        # store only what consensus verified: the reproduced verdict, the code-checked quote, a fixed reason
+        return verified_ruling(gl.vm.run_nondet(leader_fn, validator_fn), bool(hard))
 
     def _count(self, verdict: str, delta: int) -> None:
         current = int(self.verdict_counts[verdict]) if verdict in self.verdict_counts else 0

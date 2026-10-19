@@ -9,7 +9,9 @@ Two layers, both run identically by every validator:
 2. Judging, by model. Two independent readings, worded differently: one classifies, one first
    enumerates every instruction the text gives a model. The verdict stands only if both agree,
    and POISONED must quote a span that code finds in the text (hidden characters revealed).
-   Validators compare the verdict word alone; quotes and reasons are stored, never compared.
+   Validators must reproduce the leader's verdict word exactly. Only POISONED carries a quote,
+   and code must find it in the text; the model's free-text reason is never compared, so it
+   is never stored: a ruling keeps a fixed sentence derived from verified facts (verified_ruling).
 """
 
 import json
@@ -214,3 +216,21 @@ def claim_valid(result, text: str) -> bool:
     if result["verdict"] == POISONED:
         return quote_found(str(result.get("quote", "")), text)
     return result.get("quote", "") == ""
+
+
+VERIFIED_REASONS = {
+    SAFE: "both readings found no instruction aimed at the model",
+    POISONED: "both readings found an instruction aimed at the model; the quote is verbatim from the text",
+    UNCLEAR: "the readings did not settle the verdict",
+}
+HARD_FLAG_REASON = "hard red flags present, so the text cannot be ruled SAFE"
+
+
+def verified_ruling(result: dict, hard: bool) -> dict:
+    """What a ruling stores once consensus accepted it: the verdict word every validator
+    reproduced, a POISONED quote that code found in the text, and a fixed reason derived from
+    those facts. The leader's own reason was never compared, so it is dropped."""
+    verdict = result["verdict"]
+    reason = HARD_FLAG_REASON if verdict == UNCLEAR and hard else VERIFIED_REASONS[verdict]
+    quote = str(result["quote"]) if verdict == POISONED else ""
+    return {"verdict": verdict, "quote": quote, "reason": reason}

@@ -14,7 +14,8 @@ Consensus design, one line per decision:
 - judging: each validator runs two differently worded readings that must agree; validators
   must reproduce the leader's verdict word exactly, UNCLEAR included, so no verdict is taken on
   the leader's word; SAFE and UNCLEAR carry no quote; POISONED must quote text that code
-  finds in the (revealed) text;
+  finds in the (revealed) text; the model's free-text reason is never compared, so it is never
+  stored: a ruling keeps a fixed sentence derived from the verified verdict;
 - fetching (rule_url): every validator fetches the URL itself and must derive the identical
   text, so what is judged and stored is what all of them saw.
 
@@ -39,7 +40,7 @@ ERR_EXPECTED = "[EXPECTED]"
 ERR_EXTERNAL = "[EXTERNAL]"
 ERR_TRANSIENT = "[TRANSIENT]"
 
-CONTRACT_VERSION = "1"
+CONTRACT_VERSION = "3"
 MAX_TEXT_BYTES = 12000
 MAX_PURPOSE_CHARS = 280
 MAX_URL_CHARS = 300
@@ -403,7 +404,8 @@ class InjectionJudge(gl.contract.Contract):
                 return False
             return leader_fn()["verdict"] == theirs["verdict"]
 
-        return gl.vm.run_nondet(leader_fn, validator_fn)
+        # store only what consensus verified: the reproduced verdict, the code-checked quote, a fixed reason
+        return verified_ruling(gl.vm.run_nondet(leader_fn, validator_fn), bool(hard))
 
     def _count(self, verdict: str, delta: int) -> None:
         current = int(self.verdict_counts[verdict]) if verdict in self.verdict_counts else 0
