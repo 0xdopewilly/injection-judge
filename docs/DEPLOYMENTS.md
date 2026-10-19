@@ -1,6 +1,47 @@
 # Deployments
 
-## Version 2 (live): GenLayer Studio Next (chain 61997)
+## Version 3 (live): GenLayer Studio Next (chain 61997)
+
+Version 3 stores only what consensus verified. Validators already had to reproduce the verdict word
+(v2), and code checks a POISONED quote, but nobody compared the model's free-text reason, so v2
+stored it on the leader's word. v3 replaces it with a fixed sentence derived from the verified verdict
+(`lib/verdict.py` `verified_ruling`), and `get_constants` now reports `VERSION` "3". See
+[REVIEW_RESPONSE.md](REVIEW_RESPONSE.md).
+
+| Contract | Address | Deploy transaction | Source SHA-256 | Commit |
+|---|---|---|---|---|
+| InjectionJudge | [`0x2Ff8E797DbcB373D463b1e3FAd1d7A72496c4660`](https://explorer-studio-dev.genlayer.com/address/0x2Ff8E797DbcB373D463b1e3FAd1d7A72496c4660) | [`0x1d6c61c6…`](https://explorer-studio-dev.genlayer.com/tx/0x1d6c61c6d65f7f30ba301b76186d11563d04c3b4a7a17f2c0b7d7650c37e3d87) | `4764d097b772efc241f931da953e6a315efe4bcefa4809ac819b266dbd4eeaf5` | `43d92da` |
+| SkillDirectory | [`0xF8E75DBeAfce2B460843B25fF67ccF157e0e82ac`](https://explorer-studio-dev.genlayer.com/address/0xF8E75DBeAfce2B460843B25fF67ccF157e0e82ac) | [`0xcc43e3f1…`](https://explorer-studio-dev.genlayer.com/tx/0xcc43e3f1bff716f7e62436a00c0d722696cb826371649c5e35c07c9c75068c39) | `088978d41491d6bbf2e5e70acc846f85b4343b4190b329460fec1b71f51e8853` | unchanged since `8c6f701` |
+
+SkillDirectory v3 was deployed with the InjectionJudge v3 address as its constructor argument. Both
+source hashes are read from the deploy transactions in [evidence/transactions.md](evidence/transactions.md).
+
+### Live rulings (2026-10-19): the same 15 calls, replayed on v3
+
+The texts and arguments are the v1 run's, sent unchanged; the labels are the v1 run's too. Two calls
+on the ambiguous system prompt ended UNDETERMINED: the leader said UNCLEAR and most validators, judging
+for themselves, did not, so no ruling was stored. Under the strict rule that is the correct outcome,
+and it shifts the attempt counts the later labels assume.
+
+| Transaction | Request | Outcome |
+|---|---|---|
+| [`0xc678cc53…`](https://explorer-studio-dev.genlayer.com/tx/0xc678cc53757ccb1e66ec9cbb7f8d808ef1a2f1f401e185446ea1fea7a63d6ea8) | benign MCP tool (DeepWiki style) | **SAFE** |
+| [`0x28430947…`](https://explorer-studio-dev.genlayer.com/tx/0x28430947642aa8880b21ab2495dd1aa5efbde41ba599835f209b3b4035072d64) | MCP tool with an &lt;IMPORTANT&gt; exfiltration block | **POISONED**, quote verified in the text |
+| [`0x99bf2cce…`](https://explorer-studio-dev.genlayer.com/tx/0x99bf2cce54341c42e8fbe006a5aac7119ca87d2d21b0ce6add8fb98f289c21a4) | support system prompt that keeps its instructions private, as a system prompt | **UNDETERMINED**: the leader said UNCLEAR; 3 of 4 voting validators reached another verdict on their own readings, so nothing was stored |
+| [`0x7e96c9ef…`](https://explorer-studio-dev.genlayer.com/tx/0x7e96c9eff960dc9b0642234a56b921cb9b3f5d84a4b35d3a69fc7a17081b918a) | the same text, judged as a skill | **POISONED**: the concealment line, judged as a skill |
+| [`0xddb503c1…`](https://explorer-studio-dev.genlayer.com/tx/0xddb503c1b9736f2c5b6ee7a75dd05dc0cd814ba5bc36f6f865dad82fa2e0fa1e) | a skill that addresses the judge | **UNCLEAR**, reproduced (3 agree, 2 disagree); the note to the judge is a hard flag, so SAFE is impossible |
+| [`0x66beb439…`](https://explorer-studio-dev.genlayer.com/tx/0x66beb43999e5c231215bdaf02f5f77ba3661c16410cff3870b6d09f9eb241068) | retry the UNCLEAR system-prompt ruling (attempt 2 of 3) | **UNCLEAR**, reproduced (3 agree, 2 disagree): the first stored ruling, attempt 1 |
+| [`0x799541c4…`](https://explorer-studio-dev.genlayer.com/tx/0x799541c438503783e9e935c51f9c527be4dd5d4081783495b492019939a55047) | fetch and rule an honest skill | **SAFE** |
+| [`0xf28cd0d4…`](https://explorer-studio-dev.genlayer.com/tx/0xf28cd0d48925adf1ead4bcc2eea96a7361f85d753f3397e48291ad1976bd1b24) | fetch and rule the same skill with a poisoned step and a hidden payload | **POISONED**, quote verified; hard flags present |
+| [`0x5d90e37c…`](https://explorer-studio-dev.genlayer.com/tx/0x5d90e37c96bebbf7d5e5c297e41433ef71142c55ee4ac2745fbc9b63ba4a86fe) | fetch and rule a real public skill (Anthropic, pdf) | **SAFE** (Anthropic's public pdf skill) |
+| [`0x3bc3c0d6…`](https://explorer-studio-dev.genlayer.com/tx/0x3bc3c0d6d9facc102d5a03bd7589a033f60a636e01e18770952b01446d5f0486) | system-prompt ruling, attempt 3 of 3 | **UNDETERMINED**: the leader's UNCLEAR was not reproduced (3 disagree); the stored ruling stays at attempt 1 |
+| [`0x45ca5ccf…`](https://explorer-studio-dev.genlayer.com/tx/0x45ca5ccf8938e0d779815675dfff0d71d1bb893ecd2c21970b47478d7dbbed83) | system-prompt ruling again after the cap: answered from storage | **SAFE**, reproduced (3 agree, 2 disagree): attempt 2 settles the UNCLEAR ruling, now final |
+| [`0xeff3ae6e…`](https://explorer-studio-dev.genlayer.com/tx/0xeff3ae6e2040d2e8391fbe01a164dbacb88d53690522ad9c6ee64a4620b0bb52) | the poisoned tool again: a final ruling is never re-judged | POISONED from storage, no model run |
+| [`0x59ebf777…`](https://explorer-studio-dev.genlayer.com/tx/0x59ebf7773aa6c77f106c561d39a406780a8d35e2f2d1182ef2e10c13f36b1303) | SkillDirectory lists the honest skill (cross-contract read) | listed (cross-contract read) |
+| [`0x82bc6323…`](https://explorer-studio-dev.genlayer.com/tx/0x82bc6323f63b577e54236a4ba364a51afa37cfb458e7438601a9832d9c686634) | SkillDirectory lists the Anthropic pdf skill | listed |
+| [`0x9b754950…`](https://explorer-studio-dev.genlayer.com/tx/0x9b7549506f6e1b8e25596e529c1e7c5484a5b55dd5de8e3433707cea682ce10f) | SkillDirectory refuses the poisoned skill (must fail) | **refused** on chain: `InjectionJudge ruled this skill POISONED` |
+
+## Version 2 (history): GenLayer Studio Next (chain 61997)
 
 Version 2 answers the steward review of 2026-10-19: UNCLEAR is no longer a safe harbour. Every
 validator runs its own two readings and must reach exactly the leader's verdict word, UNCLEAR

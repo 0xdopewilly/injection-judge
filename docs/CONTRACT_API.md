@@ -55,7 +55,7 @@ Consensus:
 | `verdict_of(rid: str) -> str` | `"SAFE"`, `"POISONED"`, `"UNCLEAR"`, or `""` for an unknown rid |
 | `ruling_id(text_hash: str, kind: str, purpose: str, caps: str) -> str` | the rid, with the same normalisation as the writes |
 | `lookup(text_hash, kind, purpose, caps) -> str` | the full ruling JSON, or `{"found": false, "rid"}` |
-| `get_ruling(rid: str) -> str` | the full ruling: the summary fields plus `found`, `reason`, `requested_by`, `first_ruled_at`, `text` (revealed), `size` |
+| `get_ruling(rid: str) -> str` | the full ruling: the summary fields plus `found`, `reason` (a fixed sentence for the verdict, never model text), `requested_by`, `first_ruled_at`, `text` (revealed), `size` |
 | `get_url(url: str) -> str` | the full ruling for the URL's latest fetch, plus `url` |
 | `rulings_for_text(text_hash: str) -> str` | `{"text_hash", "items": [summary…]}`: every declaration this text was judged under |
 | `list_rulings(offset: int, limit: int) -> str` | `{"total", "offset", "items": [summary…]}`, oldest first, `limit` ≤ 50 |

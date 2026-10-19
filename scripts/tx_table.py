@@ -23,6 +23,8 @@ from genlayer_read import decode  # noqa: E402
 RPC = "https://studio-dev.genlayer.com/api"
 EXPLORER = "https://explorer-studio-dev.genlayer.com"
 NAMES = {
+    "0x2ff8e797dbcb373d463b1e3fad1d7a72496c4660": "InjectionJudge v3",
+    "0xf8e75dbeafce2b460843b25ff67ccf157e0e82ac": "SkillDirectory v3",
     "0x4d938096e549fc900db9af72ac0d0af168e5d482": "InjectionJudge v2",
     "0x71c0006df02839b2030a780151bda2727045f6da": "SkillDirectory v2",
     "0x9619015c5aa5e75f62436fa8461c34f350e764d9": "InjectionJudge v1",
@@ -88,6 +90,10 @@ def main() -> int:
                 outcome = "listed"
         if error:
             outcome = short(error, 80)
+        decision = ((tx.get("consensus_history") or {}).get("latestDecision") or {}).get("status")
+        if decision == "UNDETERMINED":
+            # no majority reproduced the leader's result: nothing was stored
+            outcome = "UNDETERMINED (" + str(tx.get("result_name")) + "): leader said " + (outcome or "nothing") + ", not stored"
         votes = list((data.get("votes") or {}).values())
         rows.append((str(tx.get("created_at", ""))[:19].replace("T", " "), contract, method, ", ".join(short(a) for a in args), tx.get("status"),
                      tx.get("txExecutionResultName"), outcome, f"{votes.count('agree')} agree, {votes.count('disagree')} disagree", h))

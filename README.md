@@ -16,10 +16,10 @@ a ruling it can rely on, decided by GenLayer validators instead of one reviewer:
 
 | | |
 |---|---|
-| InjectionJudge (v2) | [`0x4d938096e549fc900Db9Af72ac0d0aF168e5D482`](https://explorer-studio-dev.genlayer.com/address/0x4d938096e549fc900Db9Af72ac0d0aF168e5D482), source SHA-256 `0f621760…3e9b` from commit `76792f1` |
-| SkillDirectory (example consumer) | [`0x71c0006Df02839B2030a780151bda2727045f6dA`](https://explorer-studio-dev.genlayer.com/address/0x71c0006Df02839B2030a780151bda2727045f6dA), reads InjectionJudge with cross-contract views |
-| Rulings | an exfiltrating MCP tool ruled POISONED with its injected sentence quoted; a fetched skill with an exfiltration step, a concealment line and a hidden Unicode payload ruled POISONED; concealment wording in a skill and a note addressed to the judge ruled POISONED; a benign tool, an honest skill and Anthropic's real `pdf` skill ruled SAFE; an ambiguous system prompt ruled UNCLEAR three times, reproduced by the validators each time |
-| Version 1 | [`0x9619015C…`](https://explorer-studio-dev.genlayer.com/address/0x9619015C5Aa5e75F62436Fa8461C34f350E764d9), kept as history; it accepted UNCLEAR without checking it ([docs/REVIEW_RESPONSE.md](docs/REVIEW_RESPONSE.md)) |
+| InjectionJudge (v3) | [`0x2Ff8E797DbcB373D463b1e3FAd1d7A72496c4660`](https://explorer-studio-dev.genlayer.com/address/0x2Ff8E797DbcB373D463b1e3FAd1d7A72496c4660), source SHA-256 `4764d097…eaf5` from commit `43d92da` |
+| SkillDirectory (example consumer) | [`0xF8E75DBeAfce2B460843B25fF67ccF157e0e82ac`](https://explorer-studio-dev.genlayer.com/address/0xF8E75DBeAfce2B460843B25fF67ccF157e0e82ac), reads InjectionJudge v3 with cross-contract views |
+| Rulings | an exfiltrating MCP tool ruled POISONED with its injected sentence quoted; a fetched skill with an exfiltration step, a concealment line and a hidden Unicode payload ruled POISONED; concealment wording judged as a skill ruled POISONED; a benign tool, an honest skill and Anthropic's real `pdf` skill ruled SAFE; a note addressed to the judge held at UNCLEAR, reproduced by the validators; an ambiguous system prompt twice left UNDETERMINED (the validators did not reproduce the leader's UNCLEAR, so nothing was stored), then UNCLEAR, then SAFE by agreement |
+| Earlier versions | v2 [`0x4d938096…`](https://explorer-studio-dev.genlayer.com/address/0x4d938096e549fc900Db9Af72ac0d0aF168e5D482) stored the model's unverified reason; v1 [`0x9619015C…`](https://explorer-studio-dev.genlayer.com/address/0x9619015C5Aa5e75F62436Fa8461C34f350E764d9) accepted UNCLEAR without checking it. Both are kept as history ([docs/REVIEW_RESPONSE.md](docs/REVIEW_RESPONSE.md)) |
 | Composability | the directory listed the two SAFE skills and refused the poisoned one on chain: `InjectionJudge ruled this skill POISONED` |
 | Evidence | every transaction is FINALIZED, decoded from the chain in [`docs/evidence`](docs/evidence), with contract readbacks ([`docs/DEPLOYMENTS.md`](docs/DEPLOYMENTS.md)) |
 
@@ -31,7 +31,7 @@ a ruling it can rely on, decided by GenLayer validators instead of one reviewer:
 | `rule_url(url, kind, purpose, caps)` | write | Every validator fetches the URL and must see identical text, then the text is screened and judged |
 | `verdict_of(rid)` | view | `"SAFE"`, `"POISONED"`, `"UNCLEAR"`, or `""`: the call other contracts make |
 | `ruling_id(text_hash, kind, purpose, caps)` | view | The content address of a ruling |
-| `lookup(text_hash, kind, purpose, caps)`, `get_ruling(rid)` | view | A ruling in full: verdict, quote, reason, flags, attempts, and the judged text with hidden characters revealed |
+| `lookup(text_hash, kind, purpose, caps)`, `get_ruling(rid)` | view | A ruling in full: verdict, quote, a fixed reason for the verdict, flags, attempts, and the judged text with hidden characters revealed |
 | `get_url(url)`, `rulings_for_text(text_hash)`, `list_rulings(offset, limit)`, `get_stats()`, `get_constants()` | view | Indexes and counters |
 
 `kind` is one of `mcp-tool`, `skill`, `agent-rules`, `system-prompt`, `other`. `caps` is a
@@ -54,7 +54,7 @@ if ruling.get("verdict") != "SAFE":
 | Step | What validators agree on |
 |---|---|
 | Screening | Nothing to agree on: red flags are computed in code ([`lib/redflags.py`](lib/redflags.py), [`lib/verdict.py`](lib/verdict.py)) and are identical everywhere. A hard flag makes SAFE impossible whatever any model says, so injected text can push a ruling toward UNCLEAR, never toward SAFE. |
-| Judging | Each validator runs two differently worded readings (classify; enumerate every instruction first) that must agree. Every validator must reproduce the leader's verdict word exactly, UNCLEAR included: no verdict is taken on the leader's word. POISONED must quote a span that code finds in the text, with hidden characters revealed; SAFE and UNCLEAR carry no quote. |
+| Judging | Each validator runs two differently worded readings (classify; enumerate every instruction first) that must agree. Every validator must reproduce the leader's verdict word exactly, UNCLEAR included: no verdict is taken on the leader's word. POISONED must quote a span that code finds in the text, with hidden characters revealed; SAFE and UNCLEAR carry no quote. The model's free-text reason is never compared, so it is never stored: a ruling keeps a fixed sentence derived from the verified verdict. |
 | Fetching (`rule_url`) | Every validator fetches the URL itself and must derive the identical text and hash, so what is judged and stored is what all of them saw. Classified failures (HTTP status, size, not UTF-8) are agreed on too. |
 
 Hard flags depend on the kind of text:
