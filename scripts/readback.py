@@ -14,8 +14,8 @@ sys.path.insert(0, str(ROOT / "lib"))
 import genlayer_read  # noqa: E402
 
 RPC = "https://studio-dev.genlayer.com/api"
-JUDGE = "0x9619015C5Aa5e75F62436Fa8461C34f350E764d9"
-DIRECTORY = "0xEE840c1CE979637F4E07868Ce61aa914212404da"
+JUDGE = "0x4d938096e549fc900Db9Af72ac0d0aF168e5D482"
+DIRECTORY = "0x71c0006Df02839B2030a780151bda2727045f6dA"
 
 
 def view(contract: str, method: str, *args):

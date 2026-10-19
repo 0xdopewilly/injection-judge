@@ -8,6 +8,7 @@ execution result, votes and the returned value or error, all decoded from the ch
 """
 
 import base64
+import hashlib
 import json
 import pathlib
 import sys
@@ -22,8 +23,10 @@ from genlayer_read import decode  # noqa: E402
 RPC = "https://studio-dev.genlayer.com/api"
 EXPLORER = "https://explorer-studio-dev.genlayer.com"
 NAMES = {
-    "0x9619015c5aa5e75f62436fa8461c34f350e764d9": "InjectionJudge",
-    "0xee840c1ce979637f4e07868ce61aa914212404da": "SkillDirectory",
+    "0x4d938096e549fc900db9af72ac0d0af168e5d482": "InjectionJudge v2",
+    "0x71c0006df02839b2030a780151bda2727045f6da": "SkillDirectory v2",
+    "0x9619015c5aa5e75f62436fa8461c34f350e764d9": "InjectionJudge v1",
+    "0xee840c1ce979637f4e07868ce61aa914212404da": "SkillDirectory v1",
 }
 
 
@@ -47,7 +50,7 @@ def framed(b64: str):
     return None, raw[1:].decode("utf-8", "replace")
 
 
-def short(value, limit=46) -> str:
+def short(value, limit=80) -> str:
     text = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
     text = text.replace("|", "/").replace("\n", " ")
     return text if len(text) <= limit else text[: limit - 1] + "…"
@@ -74,6 +77,9 @@ def main() -> int:
         to = str(tx.get("to_address") or "").lower()
         contract = NAMES.get(to, "deploy" if method == "(deploy)" else to[:10])
         args = message.get("args", []) if isinstance(message, dict) else []
+        code = tx.get("data", {}).get("contract_code") if isinstance(tx.get("data"), dict) else None
+        if method == "(deploy)" and code:
+            args = ["source SHA-256 " + hashlib.sha256(base64.b64decode(code)).hexdigest()]
         outcome = ""
         if isinstance(returned, dict):
             if "verdict" in returned:
@@ -83,9 +89,9 @@ def main() -> int:
         if error:
             outcome = short(error, 80)
         votes = list((data.get("votes") or {}).values())
-        rows.append((str(tx.get("created_at", ""))[11:19], contract, method, ", ".join(short(a) for a in args), tx.get("status"),
+        rows.append((str(tx.get("created_at", ""))[:19].replace("T", " "), contract, method, ", ".join(short(a) for a in args), tx.get("status"),
                      tx.get("txExecutionResultName"), outcome, f"{votes.count('agree')} agree, {votes.count('disagree')} disagree", h))
-    print("| Time (UTC) | Contract | Call | Arguments | Status | Outcome | Votes | Transaction |")
+    print("| Created (UTC) | Contract | Call | Arguments | Status | Outcome | Votes | Transaction |")
     print("|---|---|---|---|---|---|---|---|")
     for t, contract, method, args, status, execution, outcome, votes, h in rows:
         status_text = status + ("" if execution == "FINISHED_WITH_RETURN" else ", " + str(execution))

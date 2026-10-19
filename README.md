@@ -16,9 +16,10 @@ a ruling it can rely on, decided by GenLayer validators instead of one reviewer:
 
 | | |
 |---|---|
-| InjectionJudge | [`0x9619015C5Aa5e75F62436Fa8461C34f350E764d9`](https://explorer-studio-dev.genlayer.com/address/0x9619015C5Aa5e75F62436Fa8461C34f350E764d9), source SHA-256 `b2c61ce2…f4d4` from commit `83d2cb2` |
-| SkillDirectory (example consumer) | [`0xEE840c1CE979637F4E07868Ce61aa914212404da`](https://explorer-studio-dev.genlayer.com/address/0xEE840c1CE979637F4E07868Ce61aa914212404da), reads InjectionJudge with cross-contract views |
-| Rulings | an exfiltrating MCP tool ruled POISONED with its injected sentence quoted; a fetched skill with an exfiltration step, a concealment line and a hidden Unicode payload ruled POISONED; a benign tool, an honest skill and Anthropic's real `pdf` skill ruled SAFE; text addressed to the judge and concealment wording in a skill held at UNCLEAR by hard flags |
+| InjectionJudge (v2) | [`0x4d938096e549fc900Db9Af72ac0d0aF168e5D482`](https://explorer-studio-dev.genlayer.com/address/0x4d938096e549fc900Db9Af72ac0d0aF168e5D482), source SHA-256 `0f621760…3e9b` from commit `76792f1` |
+| SkillDirectory (example consumer) | [`0x71c0006Df02839B2030a780151bda2727045f6dA`](https://explorer-studio-dev.genlayer.com/address/0x71c0006Df02839B2030a780151bda2727045f6dA), reads InjectionJudge with cross-contract views |
+| Rulings | an exfiltrating MCP tool ruled POISONED with its injected sentence quoted; a fetched skill with an exfiltration step, a concealment line and a hidden Unicode payload ruled POISONED; concealment wording in a skill and a note addressed to the judge ruled POISONED; a benign tool, an honest skill and Anthropic's real `pdf` skill ruled SAFE; an ambiguous system prompt ruled UNCLEAR three times, reproduced by the validators each time |
+| Version 1 | [`0x9619015C…`](https://explorer-studio-dev.genlayer.com/address/0x9619015C5Aa5e75F62436Fa8461C34f350E764d9), kept as history; it accepted UNCLEAR without checking it ([docs/REVIEW_RESPONSE.md](docs/REVIEW_RESPONSE.md)) |
 | Composability | the directory listed the two SAFE skills and refused the poisoned one on chain: `InjectionJudge ruled this skill POISONED` |
 | Evidence | every transaction is FINALIZED, decoded from the chain in [`docs/evidence`](docs/evidence), with contract readbacks ([`docs/DEPLOYMENTS.md`](docs/DEPLOYMENTS.md)) |
 

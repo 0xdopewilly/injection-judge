@@ -1,6 +1,49 @@
 # Deployments
 
-## GenLayer Studio Next (chain 61997)
+## Version 2 (live): GenLayer Studio Next (chain 61997)
+
+Version 2 answers the steward review of 2026-10-19: UNCLEAR is no longer a safe harbour. Every
+validator runs its own two readings and must reach exactly the leader's verdict word, UNCLEAR
+included, and SAFE and UNCLEAR rulings carry no quote. See [REVIEW_RESPONSE.md](REVIEW_RESPONSE.md).
+
+| Contract | Address | Deploy transaction | Source SHA-256 | Commit |
+|---|---|---|---|---|
+| InjectionJudge | [`0x4d938096e549fc900Db9Af72ac0d0aF168e5D482`](https://explorer-studio-dev.genlayer.com/address/0x4d938096e549fc900Db9Af72ac0d0aF168e5D482) | [`0xc35e599e…`](https://explorer-studio-dev.genlayer.com/tx/0xc35e599ece32efbc875ddc6dd64f1fb8bf9beb8ba733ea3f0c4cbbc7a458a77b) (FINALIZED) | `0f621760ee95282d1e87821883c0c5ff07f5bda2e3e4d341da54d9857eea3e9b` | `76792f1` |
+| SkillDirectory | [`0x71c0006Df02839B2030a780151bda2727045f6dA`](https://explorer-studio-dev.genlayer.com/address/0x71c0006Df02839B2030a780151bda2727045f6dA) | [`0x036d6ee4…`](https://explorer-studio-dev.genlayer.com/tx/0x036d6ee47c1ea4f0a2730a52095bba4cba9e5f5024a7191fac180eba5fb83af7) (FINALIZED) | `088978d41491d6bbf2e5e70acc846f85b4343b4190b329460fec1b71f51e8853` | `76792f1` (unchanged) |
+
+SkillDirectory v2 was deployed with the InjectionJudge v2 address as its constructor argument.
+`get_constants` still reports `VERSION` "1": that constant is the interface version, which v2 does
+not change. The deployed code is identified by its SHA-256, read from the deploy transaction in
+[evidence/transactions.md](evidence/transactions.md): `git show 76792f1:contracts/injection_judge.py | sha256sum`.
+
+### Live rulings (2026-10-19): the same 15 calls as the v1 run, replayed
+
+The texts and arguments were decoded from the v1 transactions and sent unchanged. Votes marked
+"disagree" are validators whose own readings reached a different verdict: under v2 they are counted,
+not waved through.
+
+| Transaction | Request | Outcome |
+|---|---|---|
+| [`0x40e1a510…`](https://explorer-studio-dev.genlayer.com/tx/0x40e1a510f1f9d20dd9133f61dc45c0846a27ffa7c454f9e679790c07ae686ece) | benign MCP tool (DeepWiki style) | **SAFE** |
+| [`0xc06aa3f0…`](https://explorer-studio-dev.genlayer.com/tx/0xc06aa3f0742e951bf0c6dac257a3d7e5c00f4a01b25e26f8f1e82ee725a1e6b9) | MCP tool with an <IMPORTANT> exfiltration block | **POISONED**, quote verified in the text; hard H2, H4 |
+| [`0x8bf1308d…`](https://explorer-studio-dev.genlayer.com/tx/0x8bf1308d295d0ab99cbd13ddbd7f12f845961052bd6cf239aa9681061ff67ab3) | support system prompt that keeps its instructions private, as a system prompt | **UNCLEAR**: validators reproduced it (3 agree, 1 disagree) |
+| [`0x76f1ac40…`](https://explorer-studio-dev.genlayer.com/tx/0x76f1ac4094b3b0b342429342e36058e75af6609daa441083a10fb97401a67c1b) | the same text, judged as a skill | **POISONED**: the concealment line as a skill (v1 held it at UNCLEAR) |
+| [`0x890ae983…`](https://explorer-studio-dev.genlayer.com/tx/0x890ae98362c1e80ee5b7fa6c16ce2bbc75f31ac5347e7ca421b7766654f3d5fa) | a skill that addresses the judge | **POISONED**: the note addressed to the judge (v1 held it at UNCLEAR) |
+| [`0x3a57ce42…`](https://explorer-studio-dev.genlayer.com/tx/0x3a57ce42dce46da5f97a62e9217ff372ac64d75e2b8480e7fa7a36765a40f285) | retry the UNCLEAR system-prompt ruling (attempt 2 of 3) | **UNCLEAR** again (attempt 2) |
+| [`0xa882501f…`](https://explorer-studio-dev.genlayer.com/tx/0xa882501f33bec65c12c9af66be165e4aa2de34f074b9369b349bee9d02775fc5) | fetch and rule an honest skill | **SAFE** |
+| [`0x3a13f44c…`](https://explorer-studio-dev.genlayer.com/tx/0x3a13f44c1266b8bbe7aed46a9c8f514fbea0147cfd2d5bcfa0a812d08baf348f) | fetch and rule the same skill with a poisoned step and a hidden payload | **POISONED**, quote verified; hard H1, H2, H3 |
+| [`0x54f5228b…`](https://explorer-studio-dev.genlayer.com/tx/0x54f5228be2297c66be23f9e9d0c8746342f4606ab23b9d7897ac0763265714b8) | fetch and rule a real public skill (Anthropic, pdf) | **SAFE** (Anthropic's public pdf skill) |
+| [`0x4ca6fc27…`](https://explorer-studio-dev.genlayer.com/tx/0x4ca6fc27d3a7cce1ef29eec9be4c83641d638aec1a612a5fc8e6dfc1775fe309) | system-prompt ruling, attempt 3 of 3 | **UNCLEAR**, attempt 3 of 3: now final |
+| [`0x18d4f0ef…`](https://explorer-studio-dev.genlayer.com/tx/0x18d4f0ef54d52c801b748e255cfe786c649be40571c4af72c971938008ea857f) | system-prompt ruling again after the cap: answered from storage | UNCLEAR from storage, no model run |
+| [`0xe20728c6…`](https://explorer-studio-dev.genlayer.com/tx/0xe20728c639144d04c291b6a23bf55ab7b89a47ebcacee2a4a5ddef8accc8a25c) | the poisoned tool again: a final ruling is never re-judged | POISONED from storage |
+| [`0x372c21d4…`](https://explorer-studio-dev.genlayer.com/tx/0x372c21d404abf0012901abbb29e8ef7892e5a42700ccc2c764cd6cc7aab4ed44) | SkillDirectory lists the honest skill (cross-contract read) | listed (cross-contract read) |
+| [`0x390ef1e9…`](https://explorer-studio-dev.genlayer.com/tx/0x390ef1e95ae43f71eab2c9b5f9a7fb303eb5eb19e953eb4f1e78c211829232b9) | SkillDirectory lists the Anthropic pdf skill | listed |
+| [`0x40ccdb43…`](https://explorer-studio-dev.genlayer.com/tx/0x40ccdb439cf31c27ff9520b161ad923e0b2fc879a2d2c4f4b527345191e810c3) | SkillDirectory refuses the poisoned skill (must fail) | **refused** on chain: `InjectionJudge ruled this skill POISONED` |
+
+The pdf ruling's client hit an RPC error while waiting; the transaction finalized and its hash was
+recovered with `sim_getTransactionsForAddress`.
+
+## Version 1 (history): GenLayer Studio Next (chain 61997)
 
 | Contract | Address | Deploy transaction | Source SHA-256 | Commit |
 |---|---|---|---|---|
@@ -12,7 +55,7 @@ Runner `py-genlayer:5jycge4q…` (GenVM v0.3). Deployer and caller: the dev acco
 `git show 83d2cb2:contracts/injection_judge.py | sha256sum`. SkillDirectory was deployed with the
 InjectionJudge address as its constructor argument.
 
-## Live rulings (2026-10-15)
+### Live rulings (2026-10-15)
 
 Every transaction below is FINALIZED; [`evidence/transactions.md`](evidence/transactions.md) decodes
 each one from `eth_getTransactionByHash` (method, arguments, status, votes, returned value), and
